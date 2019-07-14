@@ -1,0 +1,247 @@
+人设
+	国网互联
+
+
+自我介绍 
+
+说一个你做过的最自豪的项目，或是最近做过的一个项目。
+说一个你解决过的最难的技术问题，或是最有技术含量的问题。
+说一个你最痛苦的项目，或最艰难的项目。
+说一个犯过的最大的技术错误，或是引发的技术故障。
+
+
+为什么要使用springboot？/springboot比springmvc好哪了？springcloud
+自动配置
+starter原理
+	
+	Spring Boot Starter的工作原理如下： 
+	1. Spring Boot 在启动时扫描项目所依赖的JAR包，寻找包含spring.factories文件的JAR 
+	2. 根据spring.factories配置加载AutoConfigure类 
+	3. 根据 @Conditional注解的条件，进行自动配置并将Bean注入Spring Context 
+java配置
+没有server.xml
+https://blog.csdn.net/yuzongtao/article/details/84295732
+
+
+jvm调优
+
+	年轻代大小选择
+
+		响应时间优先的应用：尽可能设大，直到接近系统的最低响应时间限制（根据实际情况选择）。在此种情况下，年轻代收集发生的频率也是最小的。同时，减少到达年老代的对象。
+
+		吞吐量优先的应用：尽可能的设置大，可能到达Gbit的程度。因为对响应时间没有要求，垃圾收集可以并行进行，一般适合8CPU以上的应用。
+
+	年老代大小选择
+
+		响应时间优先的应用：
+			年老代使用并发收集器，所以其大小需要小心设置，一般要考虑并发会话率和会话持续时间等一些参数。如果堆设置小了，可以会造成内存碎片、高回收频率以及应用暂停而使用传统的标记清除方式；
+			如果堆大了，则需要较长的收集时间。最优化的方案，一般需要参考以下数据获得：
+
+			并发垃圾收集信息
+			持久代并发收集次数
+			传统GC信息
+			花在年轻代和年老代回收上的时间比例
+			减少年轻代和年老代花费的时间，一般会提高应用的效率
+	
+		吞吐量优先的应用
+
+			一般吞吐量优先的应用都有一个很大的年轻代和一个较小的年老代。原因是，这样可以尽可能回收掉大部分短期对象，减少中期的对象，而年老代尽存放长期存活对象。
+
+			较小堆引起的碎片问题
+
+			因为年老代的并发收集器使用标记、清除算法，所以不会对堆进行压缩。当收集器回收时，他会把相邻的空间进行合并，这样可以分配给较大的对象。
+			但是，当堆空间较小时，运行一段时间以后，就会出现“碎片”，如果并发收集器找不到足够的空间，那么并发收集器将会停止，然后使用传统的标记、清除方式进行回收。如果出现“碎片”，可能需要进行如下配置：
+			1. -XX:+UseCMSCompactAtFullCollection：使用并发收集器时，开启对年老代的压缩。
+			2. -XX:CMSFullGCsBeforeCompaction=0：上面配置开启的情况下，这里设置多少次Full GC后，对年老代进行压缩
+
+sql优化
+
+多线程
+
+数据库
+
+	数据库整体架构
+	
+	索引类型：
+	hash索引
+	有序数组
+	二叉搜索树
+	
+	索引：b+树，相当于一个n叉树，
+	b+树的根节点是存在内存中的，其他节点是存储在硬盘中的
+	主键索引和非主键索引区别
+		主键索引的叶子节点存的是整行数据。在 InnoDB 里，主键索引也被称为聚簇索引（clustered index）。
+
+		非主键索引的叶子节点内容是主键的值。在 InnoDB 里，非主键索引也被称为二级索引（secondary index）
+
+
+	为什么大多数场景都要用自增id做主键，什么情况下适合用业务字段做主键
+		自增id做主键
+			自增主键可以有效降低数据页的分裂和合并，提高数据页的利用率
+			显然，主键长度越小，普通索引的叶子节点就越小，普通索引占用的空间也就越小(因为非主键索引的每个叶子节点数据是主键的值，自增的主键int是4个字节，bigint是8个字节，比起业务字段做主键随随便便20个字节，节省了很多空间)
+		业务字段做主键的情况
+			只有一个索引
+			该索引必须是唯一索引(由于没有其他索引，所以不用考虑非主键索引的叶子节点大小的问题)
+			尽量使用主键查询避免回表
+	如何合理的建索引：
+		合理利用覆盖索引（如果执行的语句是 select ID from T where k between 3 and 5，这时只需要查 ID 的值，而 ID 的值已经在 k 索引树上了，因此可以直接提供查询结果，不需要回表。
+			也就是说，在这个查询里面，索引 k 已经“覆盖了”我们的查询需求，我们称为覆盖索引。），
+		最左前缀原则，
+		索引下推等提升性能（索引下推是mysql5.6之后优化的）
+	重建索引可以节省磁盘空间（alter table T engine=InnoDB）	
+		
+	对索引字段做函数操作，可能会破坏索引值的有序性，因此优化器就决定放弃走树搜索功能
+		
+	个人感觉count(*),count(1),count(id)哪个效率更好是个很好的面试题
+	老师，我这边explain 看 select count(primary_id) count(1) count(*) 都是遍历的最小索引树，没有遍历全表的情况。是不是count(1) 和count(*) 虽遍历最小索引树，
+	但是并没有扫描树里的数据，而count（id）扫描了树里的数据，所以比他俩慢？关于这个谁快谁慢的问题，真的是众说纷纭
+	
+	
+
+hashmap的实现
+	hashmap的数据结构是Node<K,V>[] 负载因子是0.75f, 默认初始化大小为16，扩容为2倍扩容
+	hash冲突时会变成单项链表(单项链表的查询是o(n))，当链表长度到达8后，会变成一个红黑树，(查询时间复杂度为O(logn))
+
+concorrent包
+	ConcurrentHashMap
+	CopyOnWriteArrayList
+	CountDownLatch
+	CyclicBarrier
+	ExecutorService
+	AtomicInteger
+	Lock
+	Condition
+
+mybatis #$区别
+
+maven的filter,maven 的dependencies和dependencyManagement
+
+		dependencies即使在子项目中不写该依赖项，那么子项目仍然会从父项目中继承该依赖项（全部继承）
+
+        dependencyManagement里只是声明依赖，并不实现引入，因此子项目需要显示的声明需要用的依赖。如果不在子项目中声明依赖，是不会从父项目中继承下来的；只有在子项目中写了该依赖项，并且没有指定具体版本，才会从父项目中继承该项，并且version和scope都读取自父pom;另外如果子项目中指定了版本号，那么会使用子项目中指定的jar版本。
+		--------------------- 
+		作者：_Emily 
+		来源：CSDN 
+		原文：https://blog.csdn.net/liutengteng130/article/details/46991829 
+		版权声明：本文为博主原创文章，转载请附上博文链接！
+		
+zk面试题
+
+	https://www.cnblogs.com/lanqiu5ge/p/9405601.html
+	
+	leader选举
+	kafka的replica的leader选举
+	
+es：
+	基础概念mapping，index
+		Meta字段（_id/_all/_source/_uit/_meta/_routing等）
+		  
+	相关性算分
+	倒排索引
+	分词器
+	集群
+	
+	
+	
+	O(1)        常数
+	O(log(n))   对数
+	O(n)        线性
+	O(nlog*n)  	迭代对数
+	O(nlog(n))  线性对数
+	O(n2)       平方
+	O(cn)       指数
+	O(n!)       阶乘
+	
+	
+	
+mq：
+	你在系统里用过消息队列吗
+	你们在项目里是怎么用消息队列的
+	那你们为什么使用消息队列啊？
+	那你说说用消息队列都有什么优点和缺点？
+	kafka、activemq、rabbitmq、rocketmq都有什么区别？
+	那你们是如何保证消息队列的高可用啊？
+	那如何保证消息的顺序性？
+	如果让你写一个消息队列，该如何进行架构设计啊？说一下你的思路
+	
+	isr 
+	
+	消息队列本质上是讲随机写变成了顺序写，不需要无序磁头的移动
+	顺序写牺牲了随机读的性能，但消息队列其实是顺序读写
+	随机写（比如mysql的btree+）提升了随机读的性能
+	https://www.jianshu.com/p/170a5a9ac98e
+	
+	什么场景下适合使用消息队列？
+		
+	
+	
+dubbo
+Dubbo 的设计目的是为了满足高并发小数据量的 rpc 调用，在大数据量下的性能表现并不好，建议使用 rmi 或 http 协议。
+
+mybatis
+
+
+redis哨兵、集群
+
+utf-8和ascii互转
+
+序列化
+
+读取大文件超过2G会oom
+
+mybatis原理
+	
+
+链接:https://pan.baidu.com/s/19Mz19pfjeh5TCm1s-COl_w 密码:4yiw 分布式事务的一个案例讲解视频
+
+2019-06-25
+kafka高可用（isr、replica），leader replica切换（zkleader选举，kafka controller），重复消息，丢失消息，幂等性，落成文档背过
+
+	kafka-HA
+	【kafka的高可用是基于replica机制，replica是在partition层的，replica分为leader和follower，leader提供读写，follower从leader拉去数据提供数据冗余，
+	当leader挂了kafkacontroller会重新选举一个leader并通知其他broker及producer和consumer】
+	kafka保证数据不丢失是基于isr机制
+		【1.Leader会维护一个与其基本保持同步的Replica列表，该列表称为ISR（in-sync Replica）
+		2.如果一个Follower比Leader落后太多，或者超过一定时间未发起数据复制请求，则Leader将其从ISR中移除
+		3.当ISR中所有Replica都向Leader发送ACK时，Leader即Commit
+		4.如果replica宕机，从isr中选举新的leader】
+		5.当然没有被commit的数据只能靠producer的retry
+		
+	【broker可能会丢数据，保证每个partition有多个replica，并且isr设置为3，保证有3个replica都有了producer提交的数据，才返回成功】
+	【consumer丢数据
+		设置offset为自动定时提交，当offset被自动定时提交时，数据还在内存中未处理，此时刚好把线程kill掉，那么offset已经提交，但是数据未处理，导致这部分内存中的数据丢失。手动提交offset
+	】
+	【consumer重复消费
+		使用业务相关的唯一键做分布式锁的key，保证消费幂等性
+	】
+	
+	
+	消息：Record。Kafka 是消息引擎嘛，这里的消息就是指 Kafka 处理的主要对象。
+	主题：Topic。主题是承载消息的逻辑容器，在实际使用中多用来区分具体的业务。
+	分区：Partition。一个有序不变的消息序列。每个主题下可以有多个分区。
+	消息位移：Offset。表示分区中每条消息的位置信息，是一个单调递增且不变的值。
+	副本：Replica。Kafka 中同一条消息能够被拷贝到多个地方以提供数据冗余，这些地方就是所谓的副本。副本还分为领导者副本和追随者副本，各自有不同的角色划分。副本是在分区层级下的，即每个分区可配置多个副本实现高可用。
+	生产者：Producer。向主题发布新消息的应用程序。
+	消费者：Consumer。从主题订阅新消息的应用程序。
+	消费者位移：Consumer Offset。表征消费者消费进度，每个消费者都有自己的消费者位移。
+	消费者组：Consumer Group。多个消费者实例共同组成的一个组，同时消费多个分区以实现高吞吐。
+	重平衡：Rebalance。消费者组内某个消费者实例挂掉后，其他消费者实例自动重新分配订阅主题分区的过程。Rebalance 是 Kafka 消费者端实现高可用的重要手段。
+
+	整个集群中选举出一个Broker作为Controller
+	controller为所有Topic的所有Partition指定Leader及Follower
+	replica的leader选举是基于kafka的controller，kafka的controller是通过zk选举出来的，replica的leader是controller通过收集broker的变化，然后以rpc的方式通知其他broker
+	减轻Zookeeper负载
+	
+	为什么 Kafka 不像 MySQL 那样允许追随者副本对外提供读服务？
+
+		答：因为mysql一般部署在不同的机器上一台机器读写会遇到瓶颈，Kafka中的领导者副本一般均匀分布在不同的broker中，已经起到了负载的作用。
+		即：同一个topic的已经通过分区的形式负载到不同的broker上了，读写的时候针对的领导者副本，但是量相比mysql一个还实例少太多，个人觉得没有必要在提供度读服务了。
+		（如果量大还可以使用更多的副本，让每一个副本本身都不太大）不知道这样理解对不对?
+2019-06-26
+pinpoint、skywalking，cat使用
+apollo使用
+redis哨兵、集群，codis
+zuul
+dubbo
+http://youzhixueyuan.com/dubbo-interview-question-answers.html
+es
